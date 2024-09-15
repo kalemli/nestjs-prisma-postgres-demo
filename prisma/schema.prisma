@@ -1,0 +1,233 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Actor {
+  id        Int         @id @default(autoincrement()) @map("actor_id")
+  firstName String      @map("first_name")
+  lastName  String?     @map("last_name")
+  updatedAt DateTime    @default(now()) @updatedAt @map("last_update")
+  films     FilmActor[]
+
+  @@map("actor")
+}
+
+model Address {
+  id         Int        @id @default(autoincrement()) @map("address_id")
+  address    String
+  address2   String?    @map("address2")
+  district   String?    @map("district")
+  cityId     Int        @map("city_id")
+  postalCode String?    @map("postal_code")
+  phone      String?    @map("phone")
+  updatedAt  DateTime   @default(now()) @updatedAt @map("last_update")
+  city       City       @relation(fields: [cityId], references: [id], onUpdate: NoAction, onDelete: NoAction)
+  customers  Customer[]
+  staffs     Staff[]
+  stores     Store[]
+
+  @@map("address")
+}
+
+model Category {
+  id        Int            @id @default(autoincrement()) @map("category_id")
+  name      String
+  updatedAt DateTime       @default(now()) @updatedAt @map("last_update")
+  films     FilmCategory[]
+
+  @@map("category")
+}
+
+model Language {
+  id        Int      @id @default(autoincrement()) @map("language_id")
+  name      String
+  updatedAt DateTime @default(now()) @updatedAt @map("last_update")
+  films     Film[]
+
+  @@map("language")
+}
+
+model City {
+  id        Int       @id @default(autoincrement()) @map("city_id")
+  city      String
+  countryId Int       @map("country_id")
+  updatedAt DateTime  @default(now()) @updatedAt @map("last_update")
+  country   Country   @relation(fields: [countryId], references: [id], onUpdate: NoAction, onDelete: NoAction)
+  addresses Address[]
+
+  @@map("city")
+}
+
+model Country {
+  id        Int      @id @default(autoincrement()) @map("country_id")
+  country   String
+  updatedAt DateTime @default(now()) @updatedAt @map("last_update")
+  cities    City[]
+
+  @@map("country")
+}
+
+model Customer {
+  id         Int       @id @default(autoincrement()) @map("customer_id")
+  firstName  String    @map("first_name")
+  lastName   String    @map("last_name")
+  email      String    @map("email")
+  storeId    Int       @map("store_id")
+  addressId  Int       @map("address_id")
+  active     Int
+  activebool Boolean   @default(true)
+  createdAt  DateTime  @default(now()) @map("created_date")
+  updatedAt  DateTime  @updatedAt @map("last_update")
+  store      Store     @relation(fields: [storeId], references: [id], onUpdate: NoAction, onDelete: NoAction)
+  address    Address   @relation(fields: [addressId], references: [id], onUpdate: NoAction, onDelete: NoAction)
+  payments   Payment[]
+  rentals    Rental[]
+
+  @@map("customer")
+}
+
+model Film {
+  id              Int            @id @default(autoincrement()) @map("film_id")
+  title           String         @map("title") @db.VarChar(255)
+  description     String         @map("description") @db.Text
+  releaseYear     Int            @map("release_year")
+  languageId      Int            @map("language_id")
+  rentalDuration  Int            @default(3) @map("rental_duration")
+  rentalRate      Decimal        @default(4.99) @map("rental_rate") @db.Decimal(4, 2)
+  length          Int
+  replacementCost Float          @default(19.99) @map("replacement_cost")
+  rating          MpaaRating     @default(G)
+  specialFeatures String[]       @map("special_features")
+  fulltext        String
+  updatedAt       DateTime       @default(now()) @updatedAt @map("last_update")
+  language        Language       @relation(fields: [languageId], references: [id])
+  actors          FilmActor[]
+  categories      FilmCategory[]
+  inventories     Inventory[]
+
+  @@map("film")
+}
+
+model FilmActor {
+  filmId    Int      @map("film_id")
+  actorId   Int      @map("actor_id")
+  updatedAt DateTime @default(now()) @updatedAt @map("last_update")
+
+  film  Film  @relation(fields: [filmId], references: [id])
+  actor Actor @relation(fields: [actorId], references: [id])
+
+  @@id([filmId, actorId])
+  @@map("film_actor")
+}
+
+model FilmCategory {
+  filmId     Int      @map("film_id")
+  categoryId Int      @map("categoryId")
+  updatedAt  DateTime @default(now()) @updatedAt @map("last_update")
+
+  film     Film     @relation(fields: [filmId], references: [id])
+  category Category @relation(fields: [categoryId], references: [id])
+
+  @@id([filmId, categoryId])
+  @@map("film_category")
+}
+
+model Inventory {
+  id        Int      @id @default(autoincrement()) @map("inventory_id")
+  updatedAt DateTime @default(now()) @updatedAt @map("last_update")
+  filmId    Int      @map("film_id")
+  storeId   Int      @map("store_id")
+
+  film    Film     @relation(fields: [filmId], references: [id])
+  store   Store    @relation(fields: [storeId], references: [id])
+  rentals Rental[]
+
+  @@map("inventory")
+}
+
+model Payment {
+  id          Int      @id @default(autoincrement()) @map("payment_id")
+  customerId  Int      @map("customer_id")
+  rentalId    Int      @map("rental_id")
+  staffId     Int      @map("staff_id")
+  amount      Decimal  @db.Decimal(5, 2)
+  paymentDate DateTime @map("payment_date")
+
+  customer Customer @relation(fields: [customerId], references: [id])
+  rental   Rental   @relation(fields: [rentalId], references: [id])
+  staff    Staff    @relation(fields: [staffId], references: [id])
+
+  @@map("payment")
+}
+
+model Rental {
+  id          Int       @id @default(autoincrement()) @map("rental_id")
+  rentalDate  DateTime  @map("rental_date")
+  inventoryId Int       @map("inventory_id")
+  customerId  Int       @map("customer_id")
+  returnDate  DateTime? @map("return_date")
+  staffId     Int       @map("staff_id")
+  updatedAt   DateTime  @default(now()) @updatedAt @map("last_update")
+
+  customer  Customer  @relation(fields: [customerId], references: [id])
+  inventory Inventory @relation(fields: [inventoryId], references: [id])
+  staff     Staff     @relation(fields: [staffId], references: [id])
+
+  payments Payment[]
+
+  @@map("rental")
+}
+
+model Staff {
+  id        Int     @id @default(autoincrement()) @map("staff_id")
+  firstName String  @map("first_name")
+  lastName  String  @map("last_name")
+  addressId Int     @map("address_id")
+  email     String  @map("email")
+  storeId   Int     @map("store_id")
+  active    Boolean @default(true)
+  username  String
+  password  String?
+
+  updatedAt DateTime  @default(now()) @updatedAt @map("last_update")
+  store     Store     @relation(fields: [storeId], references: [id])
+  address   Address   @relation(fields: [addressId], references: [id])
+  payment   Payment[]
+  rental    Rental[]
+
+  @@map("staff")
+}
+
+model Store {
+  id             Int      @id @default(autoincrement()) @map("store_id")
+  managerStaffId Int      @map("manager_staff_id")
+  addressId      Int      @map("address_id")
+  updatedAt      DateTime @default(now()) @updatedAt @map("last_update")
+
+  address Address @relation(fields: [addressId], references: [id])
+
+  customers   Customer[]
+  inventories Inventory[]
+  staffs      Staff[]
+
+  @@map("store")
+}
+
+enum MpaaRating {
+  G
+  PG
+  PG13 @map("PG-13")
+  R
+  NC17 @map("NC-17")
+}
